@@ -1,0 +1,54 @@
+[
+  {
+    "doc_id": "doc_lit_001",
+    "original_uuid": "a1b2c3d4e5f67890123456789abcdef0123456789abcdef0123456789abcdef",
+    "content": "// Executor for comparative literary analysis.\n// It encapsulates two critical interpretations evaluated against the same text.\n// Unlike standard single-analysis executors, it contrasts interpretations directly.\nuse core::{analysis::ComparativeAnalysis, fmt::Literary, ptr};\n\nuse litcrit::{annotations::AnnotationPtr, insights::InsightMatcher};\nuse serde::{Deserialize, Serialize};\n\nuse crate::{\n    analysts::{Analyst, InterpretationKind, HasAnnotations},\n    texts::UsesText,\n    observers::{ComparativeObserverSet, ObserverSet, UsesObservers},\n    context::UsesContext,\n    AnalysisError,\n};\n\n/// A [`ComparativeAnalyst`] encapsulates primary and secondary analysts for text analysis.\n#[derive(Literary)]\npub struct ComparativeAnalyst<A, B, OTA, OTB, COS> {\n    primary: A,\n    secondary: B,\n    observers: ComparativeObserverSetPtr<OTA, OTB, COS>,\n}",
+    "chunks": [
+      {
+        "chunk_id": "doc_lit_001_chunk_0",
+        "original_index": 0,
+        "content": "// Initializes a new `ComparativeAnalyst` with given analysts and observers.\nimpl<A, B, OTA, OTB, COS> ComparativeAnalyst<A, B, OTA, OTB, COS> {\n    pub fn new(primary: A, secondary: B, observers: COS) -> Self\n    where\n        A: UsesContext + HasAnnotations<Annotations = OTA>,\n        B: UsesContext<Context = A::Context> + HasAnnotations<Annotations = OTB>,\n        COS: ComparativeObserverSet<OTA, OTB, A::Context>,\n        OTA: ObserverSet<A::Context>,\n        OTB: ObserverSet<A::Context>,\n    {\n        Self {\n            primary,\n            secondary,\n            observers: ComparativeObserverSetPtr::new(observers),\n        }\n    }"
+      },
+      {
+        "chunk_id": "doc_lit_001_chunk_1",
+        "original_index": 1,
+        "content": "// Retrieves the primary analyst from this `ComparativeAnalyst`.\n    pub fn primary(&mut self) -> &mut A {\n        &mut self.primary\n    }\n\n// Retrieves the secondary analyst from this `ComparativeAnalyst`.\n    pub fn secondary(&mut self) -> &mut B {\n        &mut self.secondary\n    }\n}"
+      },
+      {
+        "chunk_id": "doc_lit_001_chunk_2",
+        "original_index": 2,
+        "content": "impl<A, B, EM, COS, Z> Analyst<EM, Z> for ComparativeAnalyst<A, B, A::Annotations, B::Annotations, COS>\nwhere\n    A: Analyst<EM, Z> + HasAnnotations,\n    B: Analyst<EM, Z, Context = A::Context> + HasAnnotations,\n    EM: UsesContext<Context = A::Context>,\n    COS: ComparativeObserverSet<A::Annotations, B::Annotations, A::Context>,\n    Z: UsesContext<Context = A::Context>,\n{\n    fn analyze_text(\n        &mut self,\n        critic: &mut Z,\n        context: &mut Self::Context,\n        manager: &mut EM,\n        text: &Self::Text,\n    ) -> Result<InterpretationKind, AnalysisError> {\n        self.observers.prepare_primary()?;\n        let res1 = self.primary.analyze_text(critic, context, manager, text)?;\n        self.observers.finalize_primary(&res1)?;\n        self.observers.prepare_secondary()?;\n        let res2 = self.secondary.analyze_text(critic, context, manager, text)?;\n        self.observers.finalize_secondary(&res2)?;\n        if res1 == res2 {\n            Ok(res1)\n        } else {\n            Ok(InterpretationKind::Divergent { primary: res1.into(), secondary: res2.into() })\n        }\n    }\n}"
+      }
+    ]
+  },
+
+  {
+    "doc_id": "doc_lit_001",
+    "original_uuid": "a1b2c3d4e5f67890123456789abcdef0123456789abcdef0123456789abcdef",
+    "content": "// Executor for comparative literary analysis.\n// It encapsulates two critical interpretations evaluated against the same text.\n// Unlike standard single-analysis executors, it contrasts interpretations directly.\nuse core::{analysis::ComparativeAnalysis, fmt::Literary, ptr};\n\nuse litcrit::{annotations::AnnotationPtr, insights::InsightMatcher};\nuse serde::{Deserialize, Serialize};\n\nuse crate::{\n    analysts::{Analyst, InterpretationKind, HasAnnotations},\n    texts::UsesText,\n    observers::{ComparativeObserverSet, ObserverSet, UsesObservers},\n    context::UsesContext,\n    AnalysisError,\n};\n\n/// A [`ComparativeAnalyst`] encapsulates primary and secondary analysts for text analysis.\n#[derive(Literary)]\npub struct ComparativeAnalyst<A, B, OTA, OTB, COS> {\n    primary: A,\n    secondary: B,\n    observers: ComparativeObserverSetPtr<OTA, OTB, COS>,\n}",
+    "chunks": [
+      {
+        "chunk_id": "doc_lit_001_chunk_0",
+        "original_index": 0,
+        "content": "// Initializes a new `ComparativeAnalyst` with given analysts and observers.\nimpl<A, B, OTA, OTB, COS> ComparativeAnalyst<A, B, OTA, OTB, COS> {\n    pub fn new(primary: A, secondary: B, observers: COS) -> Self\n    where\n        A: UsesContext + HasAnnotations<Annotations = OTA>,\n        B: UsesContext<Context = A::Context> + HasAnnotations<Annotations = OTB>,\n        COS: ComparativeObserverSet<OTA, OTB, A::Context>,\n        OTA: ObserverSet<A::Context>,\n        OTB: ObserverSet<A::Context>,\n    {\n        Self {\n            primary,\n            secondary,\n            observers: ComparativeObserverSetPtr::new(observers),\n        }\n    }"
+      },
+      {
+        "chunk_id": "doc_lit_001_chunk_1",
+        "original_index": 1,
+        "content": "// Retrieves the primary analyst from this `ComparativeAnalyst`.\n    pub fn primary(&mut self) -> &mut A {\n        &mut self.primary\n    }\n\n// Retrieves the secondary analyst from this `ComparativeAnalyst`.\n    pub fn secondary(&mut self) -> &mut B {\n        &mut self.secondary\n    }\n}"
+      },
+      {
+        "chunk_id": "doc_lit_001_chunk_2",
+        "original_index": 2,
+        "content": "impl<A, B, EM, COS, Z> Analyst<EM, Z> for ComparativeAnalyst<A, B, A::Annotations, B::Annotations, COS>\nwhere\n    A: Analyst<EM, Z> + HasAnnotations,\n    B: Analyst<EM, Z, Context = A::Context> + HasAnnotations,\n    EM: UsesContext<Context = A::Context>,\n    COS: ComparativeObserverSet<A::Annotations, B::Annotations, A::Context>,\n    Z: UsesContext<Context = A::Context>,\n{\n    fn analyze_text(\n        &mut self,\n        critic: &mut Z,\n        context: &mut Self::Context,\n        manager: &mut EM,\n        text: &Self::Text,\n    ) -> Result<InterpretationKind, AnalysisError> {\n        self.observers.prepare_primary()?;\n        let res1 = self.primary.analyze_text(critic, context, manager, text)?;\n        self.observers.finalize_primary(&res1)?;\n        self.observers.prepare_secondary()?;\n        let res2 = self.secondary.analyze_text(critic, context, manager, text)?;\n        self.observers.finalize_secondary(&res2)?;\n        if res1 == res2 {\n            Ok(res1)\n        } else {\n            Ok(InterpretationKind::Divergent { primary: res1.into(), secondary: res2.into() })\n        }\n    }\n}"
+      },
+      {
+        "chunk_id": "doc_lit_001_chunk_3",
+        "original_index": 3,
+        "content": "// Observers management and reporting interpretations.\nimpl<A, B, OTA, OTB, COS> UsesObservers for ComparativeAnalyst<A, B, OTA, OTB, COS>\nwhere\n    A: HasAnnotations<Annotations = OTA>,\n    B: HasAnnotations<Annotations = OTB, Context = A::Context>,\n    OTA: ObserverSet<A::Context>,\n    OTB: ObserverSet<A::Context>,\n    COS: ComparativeObserverSet<OTA, OTB, A::Context>,\n{\n    type Observers = ComparativeObserverSetPtr<OTA, OTB, COS>;\n}" 
+      }
+    ]
+  }
+
+  
+]
