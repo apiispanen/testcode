@@ -32,9 +32,11 @@ labels = clusterer.fit_predict(data)
 st.write(f"Number of clusters found: {len(set(labels)) - (1 if -1 in labels else 0)}")
 st.write("Cluster labels:", labels)
 
-# Evaluate the database
-results5 = converted_script.evaluate_db(base_db, 'data/evaluation_set.jsonl', 5)
-st.write("Evaluation Results (Top 5):", results5)
+
+with st.spinner("Evaluating the database..."):
+    # Evaluate the database
+    results5 = converted_script.evaluate_db(base_db, 'data/evaluation_set.jsonl', 5)
+    st.write("Evaluation Results (Top 5):", results5)
 
 # Contextual information
 DOCUMENT_CONTEXT_PROMPT = """
@@ -53,27 +55,59 @@ Please give a short succinct context to situate this chunk within the overall do
 Answer only with the succinct context and nothing else.
 """
 
-jsonl_data = converted_script.load_jsonl('data/evaluation_set.jsonl')
-doc_content = jsonl_data[0]['golden_documents'][0]['content']
-chunk_content = jsonl_data[0]['golden_chunks'][0]['content']
 
-response = converted_script.situate_context(doc_content, chunk_content, DOCUMENT_CONTEXT_PROMPT, CHUNK_CONTEXT_PROMPT)
-st.write(f"Situated context: {response.content[0].text}")
+with st.spinner("Situating the context..."):
+    jsonl_data = converted_script.load_jsonl('data/evaluation_set.jsonl')
+    doc_content = jsonl_data[0]['golden_documents'][0]['content']
+    chunk_content = jsonl_data[0]['golden_chunks'][0]['content']
 
-# Print cache performance metrics
-st.write(f"Input tokens: {response.usage.input_tokens}")
-st.write(f"Output tokens: {response.usage.output_tokens}")
-st.write(f"Cache creation input tokens: {response.usage.cache_creation_input_tokens}")
-st.write(f"Cache read input tokens: {response.usage.cache_read_input_tokens}")
+    response = converted_script.situate_context(doc_content, chunk_content, DOCUMENT_CONTEXT_PROMPT, CHUNK_CONTEXT_PROMPT)
+    st.write(f"Situated context: {response.content[0].text}")
 
-# Initialize the ContextualVectorDB
-contextual_db = converted_script.ContextualVectorDB("my_contextual_db")
+    # Print cache performance metrics
+    st.write(f"Input tokens: {response.usage.input_tokens}")
+    st.write(f"Output tokens: {response.usage.output_tokens}")
+    st.write(f"Cache creation input tokens: {response.usage.cache_creation_input_tokens}")
+    st.write(f"Cache read input tokens: {response.usage.cache_read_input_tokens}")
 
-# Load and process the data
-contextual_db.load_data(transformed_dataset, parallel_threads=5)
+    # Initialize the ContextualVectorDB
+    contextual_db = converted_script.ContextualVectorDB("my_contextual_db")
 
-r5 = converted_script.evaluate_db(contextual_db, 'data/evaluation_set.jsonl', 5)
-st.write("Contextual DB Evaluation Results (Top 5):", r5)
+    # Load and process the data
+    contextual_db.load_data(transformed_dataset, parallel_threads=5)
 
-results5_advanced = converted_script.evaluate_db_advanced(contextual_db, 'data/evaluation_set.jsonl', 5)
-st.write("Advanced Evaluation Results (Top 5):", results5_advanced)
+with st.spinner("Evaluating the contextual database..."):
+    # Evaluate the contextual database
+
+    r5 = converted_script.evaluate_db(contextual_db, 'data/evaluation_set.jsonl', 5)
+    st.write("Contextual DB Evaluation Results (Top 5):", r5)
+
+    results5_advanced = converted_script.evaluate_db_advanced(contextual_db, 'data/evaluation_set.jsonl', 5)
+    st.write("Advanced Evaluation Results (Top 5):", results5_advanced)
+
+import matplotlib.pyplot as plt
+
+# Visualize the clusters
+with st.spinner("Visualizing the clusters..."):
+
+    # Convert labels to numpy array for easier manipulation
+    labels = np.array(labels)
+
+    # Create a scatter plot
+    fig, ax = plt.subplots()
+    unique_labels = set(labels)
+    colors = plt.cm.Spectral(np.linspace(0, 1, len(unique_labels)))
+
+    for k, col in zip(unique_labels, colors):
+        if k == -1:
+            # Black used for noise.
+            col = [0, 0, 0, 1]
+
+        class_member_mask = (labels == k)
+
+        xy = np.array(data)[class_member_mask]
+        ax.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=tuple(col),
+                markeredgecolor='k', markersize=6)
+
+    ax.set_title('OPTICS Clustering')
+    st.pyplot(fig)
