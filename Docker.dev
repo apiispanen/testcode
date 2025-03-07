@@ -1,0 +1,31 @@
+# Use an official Python runtime as a parent image
+FROM python:3.10-slim AS base
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV PIP_NO_CACHE_DIR=off
+
+# Install necessary packages and clean up
+RUN apt-get update -y && \
+    apt-get install -y --no-install-recommends curl && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Set the working directory
+WORKDIR /app
+
+# Copy only the requirements file to leverage Docker cache
+COPY requirements.txt .
+
+# Install Python dependencies
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Copy the rest of the application
+COPY . .
+
+# Copy the .env file
+COPY .env .env
+
+# Command to run the application
+CMD ["streamlit", "run", "main.py", "--server.address", "0.0.0.0", "--server.port", "8501", "--server.fileWatcherType", "none", "--browser.gatherUsageStats", "false", "--client.showErrorDetails", "false", "--client.toolbarMode", "minimal", "--theme.base", "light"]

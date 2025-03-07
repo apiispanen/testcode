@@ -1,25 +1,79 @@
 import streamlit as st
 import converted_script
-# Placeholder function for semantic retrieval
-def semantic_retrieval(query):
-    # Implement your semantic retrieval logic here
-    return "Results for semantic retrieval"
+import json
+from sklearn.cluster import OPTICS
+import numpy as np
+from sklearn.cluster import OPTICS
+# Load your transformed dataset
+with open('data/codebase_chunks.json', 'r') as f:
+    transformed_dataset = json.load(f)
 
-# Placeholder function for HDB scanning
-def hdb_scanning(document):
-    # Implement your HDB scanning logic here
-    return "Results for HDB scanning"
+# Initialize the VectorDB
+base_db = converted_script.VectorDB("base_db")
 
-st.title('Demo Semantic Visualization Tool')
+# Load and process the data
+base_db.load_data(transformed_dataset)
 
-# Input for semantic retrieval
-query = st.text_input("Enter your query for semantic retrieval:")
-if query:
-    retrieval_results = semantic_retrieval(query)
-    st.write(retrieval_results)
+# Streamlit app
+st.title("OPTICS Clustering and Labeling")
 
-# Input for HDB scanning
-document = st.text_area("Enter the document for HDB scanning:")
-if document:
-    scanning_results = hdb_scanning(document)
-    st.write(scanning_results)
+# Sidebar for user inputs
+st.sidebar.header("Clustering Parameters")
+min_samples = st.sidebar.slider("Minimum Samples", 1, 100, 5)
+max_eps = st.sidebar.slider("Maximum Epsilon", 0.1, 10.0, 2.0)
+
+# Perform OPTICS clustering
+st.write("Performing OPTICS clustering...")
+data = [embedding for embedding in base_db.embeddings]
+clusterer = OPTICS(min_samples=min_samples, max_eps=max_eps)
+labels = clusterer.fit_predict(data)
+
+# Display clustering results
+st.write(f"Number of clusters found: {len(set(labels)) - (1 if -1 in labels else 0)}")
+st.write("Cluster labels:", labels)
+
+# Evaluate the database
+results5 = converted_script.evaluate_db(base_db, 'data/evaluation_set.jsonl', 5)
+st.write("Evaluation Results (Top 5):", results5)
+
+# Contextual information
+DOCUMENT_CONTEXT_PROMPT = """
+<document>
+{doc_content}
+</document>
+"""
+
+CHUNK_CONTEXT_PROMPT = """
+Here is the chunk we want to situate within the whole document
+<chunk>
+{chunk_content}
+</chunk>
+
+Please give a short succinct context to situate this chunk within the overall document for the purposes of improving search retrieval of the chunk.
+Answer only with the succinct context and nothing else.
+"""
+
+jsonl_data = converted_script.load_jsonl('data/evaluation_set.jsonl')
+doc_content = jsonl_data[0]['golden_documents'][0]['content']
+chunk_content = jsonl_data[0]['golden_chunks'][0]['content']
+
+response = converted_script.situate_context(doc_content, chunk_content, DOCUMENT_CONTEXT_PROMPT, CHUNK_CONTEXT_PROMPT)
+st.write(f"Situated context: {response.content[0].text}")
+
+# Print cache performance metrics
+st.write(f"Input tokens: {response.usage.input_tokens}")
+st.write(f"Output tokens: {response.usage.output_tokens}")
+st.write(f"Cache creation input tokens: {response.usage.cache_creation_input_tokens}")
+st.write(f"Cache read input tokens: {response.usage.cache_read_input_tokens}")
+
+# Initialize the ContextualVectorDB
+contextual_db = converted_script.ContextualVectorDB("my_contextual_db")
+
+# Load and process the data
+contextual_db.load_data(transformed_dataset, parallel_threads=5)
+
+r5 = converted_script.evaluate_db(contextual_db, 'data/evaluation_set.jsonl', 5)
+st.write("Contextual DB Evaluation Results (Top 5):", r5)
+
+results5_advanced = converted_script.evaluate_db_advanced(contextual_db, 'data/evaluation_set.jsonl', 5)
+st.write("Advanced Evaluation Results (Top 5):", results5_advanced)
