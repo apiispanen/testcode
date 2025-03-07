@@ -4,11 +4,24 @@ import json
 from sklearn.cluster import OPTICS
 import numpy as np
 from sklearn.cluster import OPTICS
+st.html("""
+    <style>
+
+
+    .stLogo {
+        height:6rem;
+        text-align:center;
+        max-width: 46rem;
+    }
+        
+        
+    </style>
+    """)
 
 from dotenv import load_dotenv
 load_dotenv(".env")
 import os
-st.logo("media/kami_logo.jpg")
+st.logo("media/kami_logo.png")
 
 # Load your transformed dataset
 with open('data/codebase_chunks.json', 'r') as f:
