@@ -4,6 +4,11 @@ import json
 from sklearn.cluster import OPTICS
 import numpy as np
 from sklearn.cluster import OPTICS
+
+from dotenv import load_dotenv
+load_dotenv(".env")
+import os
+
 # Load your transformed dataset
 with open('data/codebase_chunks.json', 'r') as f:
     transformed_dataset = json.load(f)
@@ -31,83 +36,86 @@ labels = clusterer.fit_predict(data)
 # Display clustering results
 st.write(f"Number of clusters found: {len(set(labels)) - (1 if -1 in labels else 0)}")
 st.write("Cluster labels:", labels)
+if st.button("Run Evaluation and Visualization"):
+    with st.expander("Evaluation of the database"):
+        st.write("We are evaluating the database to see how well it performs.")
+        with st.spinner("Evaluating the database..."):
+            results5 = converted_script.evaluate_db(base_db, 'data/evaluation_set.jsonl', 5)
+            st.write("Evaluation Results (Top 5):", results5)
 
+    # Contextual information
+    DOCUMENT_CONTEXT_PROMPT = """
+    <document>
+    {doc_content}
+    </document>
+    """
 
-with st.spinner("Evaluating the database..."):
-    # Evaluate the database
-    results5 = converted_script.evaluate_db(base_db, 'data/evaluation_set.jsonl', 5)
-    st.write("Evaluation Results (Top 5):", results5)
+    CHUNK_CONTEXT_PROMPT = """
+    Here is the chunk we want to situate within the whole document
+    <chunk>
+    {chunk_content}
+    </chunk>
 
-# Contextual information
-DOCUMENT_CONTEXT_PROMPT = """
-<document>
-{doc_content}
-</document>
-"""
+    Please give a short succinct context to situate this chunk within the overall document for the purposes of improving search retrieval of the chunk.
+    Answer only with the succinct context and nothing else.
+    """
 
-CHUNK_CONTEXT_PROMPT = """
-Here is the chunk we want to situate within the whole document
-<chunk>
-{chunk_content}
-</chunk>
+    with st.expander("Situating the context"):
+        st.write("We are situating the context to improve search retrieval of the chunk.")
+        with st.spinner("Situating the context..."):
+            jsonl_data = converted_script.load_jsonl('data/evaluation_set.jsonl')
+            doc_content = jsonl_data[0]['golden_documents'][0]['content']
+            chunk_content = jsonl_data[0]['golden_chunks'][0]['content']
 
-Please give a short succinct context to situate this chunk within the overall document for the purposes of improving search retrieval of the chunk.
-Answer only with the succinct context and nothing else.
-"""
+            response = converted_script.situate_context(doc_content, chunk_content, DOCUMENT_CONTEXT_PROMPT, CHUNK_CONTEXT_PROMPT)
+            st.write(f"Situated context: {response.content[0].text}")
 
+            # Print cache performance metrics
+            st.write(f"Input tokens: {response.usage.input_tokens}")
+            st.write(f"Output tokens: {response.usage.output_tokens}")
+            st.write(f"Cache creation input tokens: {response.usage.cache_creation_input_tokens}")
+            st.write(f"Cache read input tokens: {response.usage.cache_read_input_tokens}")
 
-with st.spinner("Situating the context..."):
-    jsonl_data = converted_script.load_jsonl('data/evaluation_set.jsonl')
-    doc_content = jsonl_data[0]['golden_documents'][0]['content']
-    chunk_content = jsonl_data[0]['golden_chunks'][0]['content']
+            # Initialize the ContextualVectorDB
+            contextual_db = converted_script.ContextualVectorDB("my_contextual_db")
 
-    response = converted_script.situate_context(doc_content, chunk_content, DOCUMENT_CONTEXT_PROMPT, CHUNK_CONTEXT_PROMPT)
-    st.write(f"Situated context: {response.content[0].text}")
+            # Load and process the data
+            contextual_db.load_data(transformed_dataset, parallel_threads=5)
 
-    # Print cache performance metrics
-    st.write(f"Input tokens: {response.usage.input_tokens}")
-    st.write(f"Output tokens: {response.usage.output_tokens}")
-    st.write(f"Cache creation input tokens: {response.usage.cache_creation_input_tokens}")
-    st.write(f"Cache read input tokens: {response.usage.cache_read_input_tokens}")
+            
+    with st.spinner("Evaluating the contextual database..."):
+        with st.expander("Evaluation of the contextual database"):
+            st.write("We are evaluating the contextual database to see how well it performs.")
+            r5 = converted_script.evaluate_db(contextual_db, 'data/evaluation_set.jsonl', 5)
+            st.write("Contextual DB Evaluation Results (Top 5):", r5)
 
-    # Initialize the ContextualVectorDB
-    contextual_db = converted_script.ContextualVectorDB("my_contextual_db")
+            results5_advanced = converted_script.evaluate_db_advanced(contextual_db, 'data/evaluation_set.jsonl', 5)
+            st.write("Advanced Evaluation Results (Top 5):", results5_advanced)
 
-    # Load and process the data
-    contextual_db.load_data(transformed_dataset, parallel_threads=5)
+    import matplotlib.pyplot as plt
 
-with st.spinner("Evaluating the contextual database..."):
-    # Evaluate the contextual database
+    # Visualize the clusters
+    with st.expander("Visualizing the clusters"):
+        st.write("We are visualizing the clusters formed by the OPTICS algorithm.")
+        with st.spinner("Visualizing the clusters..."):
+            # Convert labels to numpy array for easier manipulation
+            labels = np.array(labels)
 
-    r5 = converted_script.evaluate_db(contextual_db, 'data/evaluation_set.jsonl', 5)
-    st.write("Contextual DB Evaluation Results (Top 5):", r5)
+            # Create a scatter plot
+            fig, ax = plt.subplots()
+            unique_labels = set(labels)
+            colors = plt.cm.Spectral(np.linspace(0, 1, len(unique_labels)))
 
-    results5_advanced = converted_script.evaluate_db_advanced(contextual_db, 'data/evaluation_set.jsonl', 5)
-    st.write("Advanced Evaluation Results (Top 5):", results5_advanced)
+            for k, col in zip(unique_labels, colors):
+                if k == -1:
+                    # Black used for noise.
+                    col = [0, 0, 0, 1]
 
-import matplotlib.pyplot as plt
+                class_member_mask = (labels == k)
 
-# Visualize the clusters
-with st.spinner("Visualizing the clusters..."):
+                xy = np.array(data)[class_member_mask]
+                ax.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=tuple(col),
+                        markeredgecolor='k', markersize=6)
 
-    # Convert labels to numpy array for easier manipulation
-    labels = np.array(labels)
-
-    # Create a scatter plot
-    fig, ax = plt.subplots()
-    unique_labels = set(labels)
-    colors = plt.cm.Spectral(np.linspace(0, 1, len(unique_labels)))
-
-    for k, col in zip(unique_labels, colors):
-        if k == -1:
-            # Black used for noise.
-            col = [0, 0, 0, 1]
-
-        class_member_mask = (labels == k)
-
-        xy = np.array(data)[class_member_mask]
-        ax.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=tuple(col),
-                markeredgecolor='k', markersize=6)
-
-    ax.set_title('OPTICS Clustering')
-    st.pyplot(fig)
+            ax.set_title('OPTICS Clustering')
+            st.pyplot(fig)
