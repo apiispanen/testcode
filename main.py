@@ -8,6 +8,7 @@ from sklearn.cluster import OPTICS
 from dotenv import load_dotenv
 load_dotenv(".env")
 import os
+st.logo("media/kami_logo.jpg")
 
 # Load your transformed dataset
 with open('data/codebase_chunks.json', 'r') as f:
@@ -36,7 +37,7 @@ labels = clusterer.fit_predict(data)
 # Display clustering results
 st.write(f"Number of clusters found: {len(set(labels)) - (1 if -1 in labels else 0)}")
 with st.expander("Cluster Labels"):
-    st.write(labels[:10])
+    st.write(labels)
 if st.button("Run Evaluation and Visualization"):
     with st.expander("Evaluation of the database"):
         st.write("We are evaluating the database to see how well it performs.")
