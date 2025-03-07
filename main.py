@@ -35,7 +35,8 @@ labels = clusterer.fit_predict(data)
 
 # Display clustering results
 st.write(f"Number of clusters found: {len(set(labels)) - (1 if -1 in labels else 0)}")
-st.write("Cluster labels:", labels)
+with st.expander("Cluster Labels"):
+    st.write(labels[:10])
 if st.button("Run Evaluation and Visualization"):
     with st.expander("Evaluation of the database"):
         st.write("We are evaluating the database to see how well it performs.")
@@ -82,7 +83,7 @@ if st.button("Run Evaluation and Visualization"):
             # Load and process the data
             contextual_db.load_data(transformed_dataset, parallel_threads=5)
 
-            
+
     with st.spinner("Evaluating the contextual database..."):
         with st.expander("Evaluation of the contextual database"):
             st.write("We are evaluating the contextual database to see how well it performs.")
@@ -95,27 +96,26 @@ if st.button("Run Evaluation and Visualization"):
     import matplotlib.pyplot as plt
 
     # Visualize the clusters
-    with st.expander("Visualizing the clusters"):
-        st.write("We are visualizing the clusters formed by the OPTICS algorithm.")
-        with st.spinner("Visualizing the clusters..."):
-            # Convert labels to numpy array for easier manipulation
-            labels = np.array(labels)
+    st.write("We are visualizing the clusters formed by the OPTICS algorithm.")
+    with st.spinner("Visualizing the clusters..."):
+        # Convert labels to numpy array for easier manipulation
+        labels = np.array(labels)
 
-            # Create a scatter plot
-            fig, ax = plt.subplots()
-            unique_labels = set(labels)
-            colors = plt.cm.Spectral(np.linspace(0, 1, len(unique_labels)))
+        # Create a scatter plot
+        fig, ax = plt.subplots()
+        unique_labels = set(labels)
+        colors = plt.cm.Spectral(np.linspace(0, 1, len(unique_labels)))
 
-            for k, col in zip(unique_labels, colors):
-                if k == -1:
-                    # Black used for noise.
-                    col = [0, 0, 0, 1]
+        for k, col in zip(unique_labels, colors):
+            if k == -1:
+                # Black used for noise.
+                col = [0, 0, 0, 1]
 
-                class_member_mask = (labels == k)
+            class_member_mask = (labels == k)
 
-                xy = np.array(data)[class_member_mask]
-                ax.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=tuple(col),
-                        markeredgecolor='k', markersize=6)
+            xy = np.array(data)[class_member_mask]
+            ax.plot(xy[:, 0], xy[:, 1], 'o', markerfacecolor=tuple(col),
+                    markeredgecolor='k', markersize=6)
 
-            ax.set_title('OPTICS Clustering')
-            st.pyplot(fig)
+        ax.set_title('OPTICS Clustering')
+        st.pyplot(fig)
